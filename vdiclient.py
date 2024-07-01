@@ -16,6 +16,8 @@ from io import StringIO
 
 MAX_CHARACTERS = 75
 
+vm_process = None
+
 class G:
 	spiceproxy_conv = {}
 	proxmox = None
@@ -538,6 +540,7 @@ def iniwin(inistring):
 	return True
 
 def vmaction(vmnode, vmid, vmtype, action='connect'):
+	global vm_process
 	status = False
 	if vmtype == 'qemu':
 		vmstatus = G.proxmox.nodes(vmnode).qemu(str(vmid)).status.get('current')
@@ -616,7 +619,7 @@ def vmaction(vmnode, vmid, vmtype, action='connect'):
 			sleep(1)
 			i += 1
 		if not status:
-			if startpop:
+			if startpop: 
 				startpop.close()
 			return status
 	if action == 'reload':
@@ -665,6 +668,7 @@ def vmaction(vmnode, vmid, vmtype, action='connect'):
 		pass
 	status = True
 	connpop.close()
+	vm_process = process
 	return status
 
 
@@ -800,53 +804,60 @@ def showvms():
 	vms = getvms()
 	vmlist = getvms(listonly=True)
 	newvmlist = vmlist.copy()
+	global vm_process
 	if vms == False:
 		return False
 	if len(vms) < 1:
 		win_popup_button('No desktop instances found, please consult with your system administrator', 'OK')
 		return False
 	layout = setvmlayout(vms)
-	if G.icon:
+	if G.icon: 
 		window = sg.Window(G.title, layout, return_keyboard_events=True, finalize=True, resizable=False, no_titlebar=G.kiosk, size=(G.width, G.height), icon=G.icon)
 	else:
 		window = sg.Window(G.title, layout, return_keyboard_events=True, finalize=True, resizable=False, size=(G.width, G.height), no_titlebar=G.kiosk)
 	timer = datetime.now()
 	while True:
-		if (datetime.now() - timer).total_seconds() > 5:
-			timer = datetime.now()
-			newvmlist = getvms(listonly = True)
-			if newvmlist:
-				if vmlist != newvmlist:
-					vmlist = newvmlist.copy()
-					vms = getvms()
-					if vms:
-						layout = setvmlayout(vms)
-						window.close()
-						if G.icon:
-							window = sg.Window(G.title, layout, return_keyboard_events=True, finalize=True, resizable=False, no_titlebar=G.kiosk, size=(G.width, G.height), icon=G.icon)
-						else:
-							window = sg.Window(G.title, layout, return_keyboard_events=True,finalize=True, resizable=False, no_titlebar=G.kiosk, size=(G.width, G.height))
-					#window.bring_to_front()
-				else: # Refresh existing vm status
-					newvms = getvms()
-					if newvms:
-						for vm in newvms:
-							vmkeyname = f'-VM|{vm["vmid"]}-'
-							connkeyname = f'-CONN|{vm["vmid"]}-'
-							state = 'stopped'
-							if vm['status'] == 'running':
-								if 'lock' in vm:
-									state = vm['lock']
-									if state in ('suspending', 'suspended'):
-										window[connkeyname].update(disabled=True)
-										if state == 'suspended':
-											state = 'starting'
-								else:
-									state = vm['status']
-									window[connkeyname].update(disabled=False)
+		if vm_process is not None:
+			ret = vm_process.poll()
+			if ret is None:
+				sleep(1)
+			else:
+				vm_process = None
+		else:
+			if (datetime.now() - timer).total_seconds() > 5:
+				timer = datetime.now()
+				newvmlist = getvms(listonly = True)
+				if newvmlist:
+					if vmlist != newvmlist:
+						vmlist = newvmlist.copy()
+						vms = getvms()
+						if vms:
+							layout = setvmlayout(vms)
+							window.close()
+							if G.icon:
+								window = sg.Window(G.title, layout, return_keyboard_events=True, finalize=True, resizable=False, no_titlebar=G.kiosk, size=(G.width, G.height), icon=G.icon)
 							else:
-								window[connkeyname].update(disabled=False)
-							window[vmkeyname].update(f"State: {state}")
+								window = sg.Window(G.title, layout, return_keyboard_events=True,finalize=True, resizable=False, no_titlebar=G.kiosk, size=(G.width, G.height))
+					else: # Refresh existing vm status
+						newvms = getvms()
+						if newvms:
+							for vm in newvms:
+								vmkeyname = f'-VM|{vm["vmid"]}-'
+								connkeyname = f'-CONN|{vm["vmid"]}-'
+								state = 'stopped'
+								if vm['status'] == 'running':
+									if 'lock' in vm:
+										state = vm['lock']
+										if state in ('suspending', 'suspended'):
+											window[connkeyname].update(disabled=True)
+											if state == 'suspended':
+												state = 'starting'
+									else:
+										state = vm['status']
+										window[connkeyname].update(disabled=False)
+								else:
+									window[connkeyname].update(disabled=False)
+								window[vmkeyname].update(f"State: {state}")
 
 		event, values = window.read(timeout = 1000)
 		if event in ('Logout', None):
