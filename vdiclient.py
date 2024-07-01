@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import proxmoxer # pip install proxmoxer
-import PySimpleGUI as sg # pip install PySimpleGUI
+import FreeSimpleGUI as sg # pip install PySimpleGUI
 gui = 'TK'
 import requests
 from datetime import datetime
@@ -14,7 +14,7 @@ import subprocess
 from time import sleep
 from io import StringIO
 
-
+MAX_CHARACTERS = 75
 
 class G:
 	spiceproxy_conv = {}
@@ -223,7 +223,7 @@ def win_popup(message):
 	layout = [
 		[sg.Text(message, key='-TXT-')]
 	]
-	window = sg.Window('Message', layout, return_keyboard_events=True, no_titlebar=True, keep_on_top=True, finalize=True, )
+	window = sg.Window('Message', layout, return_keyboard_events=True, no_titlebar=False, keep_on_top=True, finalize=True, )
 	window.bring_to_front()
 	_, _ = window.read(timeout=10) # Fixes a black screen bug
 	window['-TXT-'].update(message)
@@ -236,7 +236,7 @@ def win_popup_button(message, button):
 				[sg.Text(message)],
 				[sg.Button(button)]
 			]
-	window = sg.Window('Message', layout, return_keyboard_events=True, no_titlebar=True, keep_on_top=True, finalize=True)
+	window = sg.Window('Message', layout, return_keyboard_events=True, no_titlebar=False, keep_on_top=True, finalize=True)
 	window.Element(button).SetFocus()
 	while True:
 		event, values = window.read()
@@ -737,7 +737,7 @@ def loginwindow():
 		connected, authenticated, error = pveauth(G.hosts[G.current_hostset]['user'])
 		popwin.close()
 		if not connected:
-			win_popup_button(f'Unable to connect to any VDI server, are you connected to the Internet?\nError Info: {error}', 'OK')
+			win_popup_button(f'Unable to connect to any VDI server, are you connected to the Internet?\nError Info: {str(error)[:MAX_CHARACTERS]}', 'OK')
 			return False, False
 		elif connected and not authenticated:
 			win_popup_button('Invalid username and/or password, please try again!', 'OK')
@@ -776,7 +776,7 @@ def loginwindow():
 					connected, authenticated, error = pveauth(user, passwd=passwd, totp=totp)
 					popwin.close()
 					if not connected:
-						win_popup_button(f'Unable to connect to any VDI server, are you connected to the Internet?\nError Info: {error}', 'OK')
+						win_popup_button(f'Unable to connect to any VDI server, are you connected to the Internet?\nError Info: {str(error)[:MAX_CHARACTERS]}', 'OK')
 					elif connected and not authenticated:
 						win_popup_button('Invalid username and/or password, please try again!', 'OK')
 					elif connected and authenticated:
