@@ -826,7 +826,7 @@ def showvms():
 							window = sg.Window(G.title, layout, return_keyboard_events=True, finalize=True, resizable=False, no_titlebar=G.kiosk, size=(G.width, G.height), icon=G.icon)
 						else:
 							window = sg.Window(G.title, layout, return_keyboard_events=True,finalize=True, resizable=False, no_titlebar=G.kiosk, size=(G.width, G.height))
-					window.bring_to_front()
+					#window.bring_to_front()
 				else: # Refresh existing vm status
 					newvms = getvms()
 					if newvms:
