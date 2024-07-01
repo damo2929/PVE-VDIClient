@@ -448,13 +448,22 @@ def getvms(listonly = False):
 				continue
 			if G.guest_type == 'both' or G.guest_type == vm['type']:
 				if listonly:
-					vms.append(
-						{
-							'vmid': vm['vmid'],
-							'name': vm['name'],
-							'node': vm['node']
-						}
-					)
+					try:
+						vms.append(
+							{
+								'vmid': vm['vmid'],
+								'name': vm['name'],
+								'node': vm['node']
+							}
+						)
+					except KeyError:
+						vms.append(
+							{
+								'vmid': vm['vmid'],
+								'name': "Unknown",
+								'node': vm['node']
+							}
+						)
 				else:
 					vms.append(vm)
 		return vms
@@ -463,6 +472,9 @@ def getvms(listonly = False):
 		return False
 	except requests.exceptions.ConnectionError as e:
 		print(f"Encountered error when querying proxmox: {e!r}")
+		return False
+	except KeyError as e:
+		print(f"Unable to parse list of VMs: {e!r}")
 		return False
 
 def setvmlayout(vms):
